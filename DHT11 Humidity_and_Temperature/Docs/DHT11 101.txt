@@ -1,0 +1,38 @@
+-----------------What is Relative Humidity?------------------
+
+The DHT11 measures relative humidity. Relative humidity is the amount of water vapor in air vs. 
+the saturation point of water vapor in air. 
+At the saturation point, water vapor starts to condense and accumulate on surfaces forming dew.
+
+The saturation point changes with air temperature. 
+Cold air can hold less water vapor before it becomes saturated, 
+and hot air can hold more water vapor before it becomes saturated.
+
+The formula to calculate relative humidity is:
+
+RH = (pw/ps)*100%
+
+RH: Relative Humidity
+pw: Density of water vapor
+ps: Density of water vapor at saturation
+
+Relative humidity is expressed as a percentage. At 100% RH, condensation occurs, 
+and at 0% RH, the air is completely dry.
+
+--------------How the DHT11 Measures Humidity and Temperature------------------------
+
+The DHT11 detects water vapor by measuring the electrical resistance between two electrodes. 
+
+The humidity sensing component is a moisture holding substrate with electrodes applied to the surface.
+When water vapor is absorbed by the substrate, ions are released by the substrate which increases the conductivity between the electrodes. 
+The change in resistance between the two electrodes is proportional to the relative humidity.
+Higher relative humidity decreases the resistance between the electrodes, while lower relative humidity increases the resistance between the electrodes.
+
+The DHT11 measures temperature with a surface mounted NTC temperature sensor (thermistor) built into the unit.
+
+----------------------Setup-------------------------------
+
+The DHT11 uses just one signal wire to transmit data to the Arduino. Power comes from separate 5V and ground wires. 
+A 10K Ohm pull-up resistor is needed between the signal line and 5V line to make sure the signal level stays high by default (see the datasheet for more info).
+
+

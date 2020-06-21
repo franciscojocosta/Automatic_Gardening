@@ -1,0 +1,1 @@
+This example shows how to read and write data to and from an SD card file.
