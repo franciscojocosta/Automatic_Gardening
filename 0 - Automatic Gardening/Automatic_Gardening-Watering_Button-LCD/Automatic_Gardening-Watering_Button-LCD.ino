@@ -188,12 +188,12 @@ void loop()
 
 // Print to LCD \\
 
-  tLCD_update =millis() - LCD_starttime;
+    tLCD_update = millis() - LCD_starttime;
   
 //Sensors Data
-  if (tLCD_update >5000 && LCDstate == 1){
-
-    LCDstate = 0;
+  if (tLCD_update >5000 && LCDstate == 0){
+    lcd.clear();//Clean the screen
+    LCDstate = 1;
     LCD_starttime = millis();
 
       // Humid \\
@@ -217,10 +217,11 @@ void loop()
     
     lcd.setCursor(13,1); 
     lcd.print("C"); 
-
+    
   }
-  if (tLCD_update >5000 && LCDstate == 0){
-  
+  tLCD_update = millis() - LCD_starttime;
+  if (tLCD_update >5000 && LCDstate == 1){
+    lcd.clear();//Clean the screen
     //lcd.clear();//Clean the screen
     
     LCDstate = 0;
@@ -272,9 +273,9 @@ void loop()
     
     lcd.setCursor(8,1); 
     lcd.print("%");
+   
     
-    
-  //lcd.clear();//Clean the screen
+  
   }
 }
 
