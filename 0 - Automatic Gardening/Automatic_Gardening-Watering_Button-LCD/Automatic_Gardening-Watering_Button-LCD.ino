@@ -38,10 +38,12 @@ const int LEDstop = 5;
 const int msensor = A0;
 const int msAirValue = 600;   //Moister sensor Air value
 const int msWaterValue = 240;  //Moister sensor Water value
- 
+const int water_high = 450; // Max soil moister threshold to water
+
 int soilmst = 0;
 int soilmst_percent=0;
 int LCDstate = 0;
+int water = 0;
 
 
 float startTime = 0;
@@ -57,6 +59,28 @@ void dateTime(uint16_t* date, uint16_t* time) {
   
   *date = FAT_DATE(now.year(), now.month(), now.day());       // return date using FAT_DATE macro to format fields
   *time = FAT_TIME(now.hour(), now.minute(), now.second());   // return time using FAT_TIME macro to format fields
+
+}
+
+bool to_water( uint16_t soilmst, uint16_t water_count, uint16_t water_countino){
+  water = 0;
+  if (soilmst < water_high){
+    water = water + 1;
+  }
+  if (water_count < 3){
+    water = water + 1;
+  }
+  if (water_countino < 3){
+    water = water + 1;
+  }
+
+  if (water = 3){
+    return HIGH;
+  }
+  else{
+    return LOW;
+  }
+  
 
 }
 
@@ -87,7 +111,7 @@ void stop()
 
 void setup()
 {
-
+  
   rtc.begin();
  //+ rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));//auto update from computer time
   pinMode(10, OUTPUT);
@@ -125,6 +149,7 @@ void setup()
 
 void loop()
 {
+  delay(5000);
   date_time now_datetime;
   now_datetime = get_dateTime();
   
@@ -164,6 +189,7 @@ void loop()
     
     //sensors
     myFile.print(DHT.temperature);
+    
     myFile.print(",");
     myFile.print(DHT.humidity);
     myFile.print(",");
@@ -187,7 +213,7 @@ void loop()
   myFile.close();
 
 // Print to LCD \\
-
+  
     tLCD_update = millis() - LCD_starttime;
   
 //Sensors Data
@@ -245,7 +271,7 @@ void loop()
   
   // Time \\
   
-      
+        
     lcd.setCursor(12,1); 
     lcd.print(":"); 
        
