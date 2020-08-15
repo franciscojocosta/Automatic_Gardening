@@ -1,15 +1,15 @@
 /******** Automtic Gardening *****************/
-#include <Wire.h>                 //I2C Bus
-#include <RTClib.h>               //Real Time Clock
-#include <SD.h>                   //SD Card
-#include <LiquidCrystal_I2C.h>    // I2C Lcd Display
-#include <dht.h>                  //DHT11 Humidity and Temperadure Sensor
+#include <Wire.h>                   //I2C Bus
+#include <RTClib.h>                 //Real Time Clock
+#include <SD.h>                     //SD Card
+#include <LiquidCrystal_I2C.h>      // I2C Lcd Display
+#include <dht.h>                    //DHT11 Humidity and Temperadure Sensor
 
 
-#define DHT11_PIN 7
-
-RTC_DS3231 rtc;     //the object rtc is created from the class RTC_DS3231
+#define DHT11_PIN 7                 // Defines DHT11 pins            
 dht DHT;
+
+RTC_DS3231 rtc;                     //the object rtc is created from the class RTC_DS3231
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE); //LCD screen init
 
@@ -17,7 +17,9 @@ File Output_File;
 
 String date;
 char filename[] = "LOGGER00.txt";
+const int SD_write_ms = 120000;      // Time in ms to Write Output File
 
+const int LCD_refresh_ms = 5000;      // Time in ms to Change LCD Page
 int LCD_state = 0;                   // LCD display page
 float LCD_refresh_ms = 0;            // Time to switch LCD Page in ms
 float base_LCD_time = 0;             // Zero ref to compare with LCD_refresh_ms
@@ -34,8 +36,10 @@ const int Soil_moist_threshold = 350; // Max soil moister threshold to water
 int Soil_moisture = 0;                // Variable to check if water is needed
 int Soil_moist_percent=0;             // Soil_moisture as percentage
 
-
+bool Watering_trig = LOW;             // If watering = HIGH -> Water_Garden function turns on the Valve
 bool Watering_flag = LOW;             // If watering = HIGH -> Water_Garden function turns on the Valve
+const int Valve_Open_ms = 10000;        // Time in ms to let the Valve Open
+int Valve_relay = 8;                  // Valve relay pin definition
 int base_watering_day = 0;            // Variable to compare if we are in a different day
 int base_watering_hour = 0;           // Variable to compare if we are in a different hour
 int Water_count_day = 0;              // Counts how many times the garden was watered in the last day
@@ -52,7 +56,6 @@ struct date_time{
       int minute;
       int second;
     };
-
 
 date_time get_dateTime() {
  
@@ -95,12 +98,16 @@ bool to_water( uint16_t Soil_moisture, uint16_t Current_day,uint16_t Current_hou
         else return LOW; }
         }
 
-void stop()
+bool WATERING(){
+    digitalWrite(Valve_relay, HIGH);
+    delay (Valve_Open_ms);
+    digitalWrite(Valve_relay, LOW);
+  }
+
+void STOP()
 {
  while(1);
 }
-
-
 void setup()
 {
   Serial.begin(9600);
@@ -117,6 +124,9 @@ void setup()
   pinMode(LEDstatus, OUTPUT);
   pinMode(LEDstop, OUTPUT);
   pinMode(moisture_sensor, INPUT);
+  pinMode(Valve_relay, OUTPUT);
+  
+  digitalWrite(Valve_relay, LOW);
   
   date_time now_datetime;
   now_datetime = get_dateTime();
@@ -148,9 +158,14 @@ void loop()
   Soil_moisture = analogRead(moisture_sensor);
   Soil_moist_percent = map (Soil_moisture, 240, 620, 0, 100);
 
-  Serial.print(to_water(Soil_moisture, now_datetime.day, now_datetime.hour));
-
-  if ( Output_File && (SD_write_time_counter > 120000) ){
+  Watering_trig = to_water(Soil_moisture, now_datetime.day, now_datetime.hour);
+  
+  if (Watering_trig == HIGH){
+    WATERING();
+    Watering_trig = LOW;
+    Watering_flag = HIGH;}
+  
+  if ( Output_File && (SD_write_time_counter > SD_write_ms) ){
     
     base_SD_write_time = millis();
    
@@ -180,7 +195,7 @@ void loop()
     //watering
 
     if (Watering_flag == HIGH){
-       Output_File.print(",");
+      Output_File.print(",");
       Output_File.println("1");
       Watering_flag = LOW;}
       
@@ -195,7 +210,7 @@ void loop()
   
   LCD_refresh_ms = millis() - base_LCD_time;
 
-  if (LCD_refresh_ms >5000 && LCD_state == 0){
+  if (LCD_refresh_ms >LCD_refresh_ms && LCD_state == 0){
     
     lcd.clear();
     LCD_state = 1;
@@ -224,11 +239,11 @@ void loop()
     lcd.print("C"); }
     
   LCD_refresh_ms = millis() - base_LCD_time;
+
   
-  if (LCD_refresh_ms >5000 && LCD_state == 1){
-    lcd.clear();//Clean the screen
-    //lcd.clear();//Clean the screen
+  if (LCD_refresh_ms >LCD_refresh_ms && LCD_state == 1){
     
+    lcd.clear();//Clean the screen
     LCD_state = 0;
     base_LCD_time = millis();
     
@@ -274,15 +289,3 @@ void loop()
     lcd.setCursor(8,1); 
     lcd.print("%");}
 }
-
-
-
-
-    /*
-Soil Moisture Reference
-Air = 0%
-Really dry soil = 10%
-Probably as low as you'd want = 20%
-Well watered = 50%
-Cup of water = 100%
-*/
