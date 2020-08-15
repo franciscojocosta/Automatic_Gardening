@@ -21,8 +21,8 @@ const int SD_write_ms = 120000;      // Time in ms to Write Output File
 
 const int LCD_refresh_ms = 5000;      // Time in ms to Change LCD Page
 int LCD_state = 0;                   // LCD display page
-float LCD_refresh_ms = 0;            // Time to switch LCD Page in ms
-float base_LCD_time = 0;             // Zero ref to compare with LCD_refresh_ms
+float LCD_time_counter = 0;            // Time to switch LCD Page in ms
+float base_LCD_time = 0;             // Zero ref to compare with LCD_time_counter
 
 const int LEDstatus = 3;
 const int LEDstop = 5;
@@ -208,9 +208,9 @@ void loop()
 
 // Print to LCD \\
   
-  LCD_refresh_ms = millis() - base_LCD_time;
+  LCD_time_counter = millis() - base_LCD_time;
 
-  if (LCD_refresh_ms >LCD_refresh_ms && LCD_state == 0){
+  if (LCD_time_counter >LCD_refresh_ms && LCD_state == 0){
     
     lcd.clear();
     LCD_state = 1;
@@ -238,10 +238,10 @@ void loop()
     lcd.setCursor(13,1); 
     lcd.print("C"); }
     
-  LCD_refresh_ms = millis() - base_LCD_time;
+  LCD_time_counter = millis() - base_LCD_time;
 
   
-  if (LCD_refresh_ms >LCD_refresh_ms && LCD_state == 1){
+  if (LCD_time_counter >LCD_refresh_ms && LCD_state == 1){
     
     lcd.clear();//Clean the screen
     LCD_state = 0;
