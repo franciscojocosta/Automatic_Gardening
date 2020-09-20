@@ -1,4 +1,4 @@
-#include <SPI.h>
+
 #include <SD.h>                   //SD Card
 #include <Wire.h>                 //I2C Bus
 #include <RTClib.h>               //Real Time Clock

@@ -5,10 +5,10 @@
 #include <LiquidCrystal_I2C.h>      // I2C Lcd Display
 #include <dht.h>                    //DHT11 Humidity and Temperadure Sensor
 
-
+#define deviceAddress 0x68  
 #define DHT11_PIN 7                 // Defines DHT11 pins            
-dht DHT;
 
+dht DHT;
 RTC_DS3231 rtc;                     //the object rtc is created from the class RTC_DS3231
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE); //LCD screen init
@@ -21,13 +21,11 @@ const int SD_write_ms = 120000;      // Time in ms to Write Output File
 
 const int LCD_refresh_ms = 5000;      // Time in ms to Change LCD Page
 int LCD_state = 0;                   // LCD display page
-float LCD_time_counter = 0;            // Time to switch LCD Page in ms
-float base_LCD_time = 0;             // Zero ref to compare with LCD_time_counter
+float LCD_time_counter = 0;           // Counts Time to compare with LCD_refresh_ms
+float base_LCD_time = 0;             // Zero ref for LCD_time_counter
 
 const int LEDstatus = 3;
 const int LEDstop = 5;
-
-int Get_Temp_Hum = DHT.read11(DHT11_PIN); 
 
 const int moisture_sensor = A0;
 const int msAirValue = 600;           // Moister sensor Air value
@@ -38,7 +36,11 @@ int Soil_moist_percent=0;             // Soil_moisture as percentage
 
 bool Watering_trig = LOW;             // If watering = HIGH -> Water_Garden function turns on the Valve
 bool Watering_flag = LOW;             // If watering = HIGH -> Water_Garden function turns on the Valve
-const int Valve_Open_ms = 10000;        // Time in ms to let the Valve Open
+bool Valve_state = LOW;               // Valve State (open/closed)
+bool  Valve_state_flag= LOW;
+const int Valve_Open_ms = 10000;      // Time in ms to let the Valve Open
+const int Valve_voltage_thd = 500;      // If Valve_voltage > Valve_voltage_thd Valve is OPEN
+int Valve_voltage = 0;                 // Measured Valve Voltage
 int Valve_relay = 8;                  // Valve relay pin definition
 int base_watering_day = 0;            // Variable to compare if we are in a different day
 int base_watering_hour = 0;           // Variable to compare if we are in a different hour
@@ -46,7 +48,7 @@ int Water_count_day = 0;              // Counts how many times the garden was wa
 int Water_count_hour = 0;             // Counts how many times the garden was watered in the last day
 
 float SD_write_time_counter = 0;      // Counts how many milli seconds passed since last SD file write
-float base_SD_write_time = 0;         // Base variable to compare with SD_write_time_counter
+float base_SD_write_time = 0;         // Zero ref for SD_write_time_counter
 
 struct date_time{
       int year;
@@ -104,6 +106,19 @@ bool WATERING(){
     digitalWrite(Valve_relay, LOW);
   }
 
+bool VALVE_STATE(){
+    for (int i = 0; i < 3; i++){
+      delay(250);
+      Valve_voltage = Valve_voltage + analogRead(A2);
+    }
+      Valve_voltage = Valve_voltage / 3;
+      if (Valve_voltage > Valve_voltage_thd){
+        return HIGH;
+        }
+       else return LOW;
+
+  }
+
 void STOP()
 {
  while(1);
@@ -111,11 +126,12 @@ void STOP()
 void setup()
 {
   Serial.begin(9600);
+  Serial.print("INIT");
+  pinMode(10, OUTPUT);
   rtc.begin();
-
   lcd.begin(16,2); //define LCD:  16 columns and 2 rows
   lcd.backlight(); // LCD Backlight ON
-
+  
   if (!SD.begin(4)) {
     return;
   }
@@ -137,7 +153,7 @@ void setup()
     filename[7] = i%10 + '0';
     if (! SD.exists(filename)) {
       Output_File = SD.open(filename, FILE_WRITE);
-      Output_File.println("Date,Time,Temperature,Humidity,Soil Moister, Soil Moister Percent,Watering?");
+      Output_File.println("Date,Time,Temperature,Humidity,Soil Moister, Soil Moister Percent,Watering?,Valve State");
       Output_File.close();
       break;}  // leave the loop!
   }    
@@ -153,19 +169,30 @@ void loop()
   Output_File = SD.open(filename, FILE_WRITE);
   SD_write_time_counter = millis() - base_SD_write_time;
   
-  Get_Temp_Hum = DHT.read11(DHT11_PIN);
+  int Get_Temp_Hum = DHT.read11(DHT11_PIN);
   
   Soil_moisture = analogRead(moisture_sensor);
   Soil_moist_percent = map (Soil_moisture, 240, 620, 0, 100);
-
+ 
   Watering_trig = to_water(Soil_moisture, now_datetime.day, now_datetime.hour);
   
   if (Watering_trig == HIGH){
     WATERING();
     Watering_trig = LOW;
     Watering_flag = HIGH;}
+    
+  Valve_state = VALVE_STATE();
+
+  if (Valve_state == HIGH){
+    Valve_state_flag = HIGH;
+  }
   
-  if ( Output_File && (SD_write_time_counter > SD_write_ms) ){
+  if (Watering_trig == LOW && Valve_state == HIGH){
+
+    STOP();
+  }
+  Serial.print(SD_write_time_counter);
+  if ( Output_File && (SD_write_time_counter > 120000) ){
     
     base_SD_write_time = millis();
    
@@ -196,12 +223,23 @@ void loop()
 
     if (Watering_flag == HIGH){
       Output_File.print(",");
-      Output_File.println("1");
+      Output_File.print("1");
       Watering_flag = LOW;}
       
     else{
        Output_File.print(",");
+      Output_File.print("0");}
+
+      //Valve State
+    if (Valve_state_flag == HIGH){
+      Output_File.print(",");
+      Output_File.println("1");
+      Valve_state_flag = LOW;}
+      
+    else{
+       Output_File.print(",");
       Output_File.println("0");}
+
   }
   
   Output_File.close();
